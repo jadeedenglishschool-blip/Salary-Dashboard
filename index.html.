@@ -1,1 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPay | Salary Automation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // Blue 600
+                        secondary: '#f8fafc', // Slate 50
+                        dark: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Toast notification animation */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex h-screen overflow-hidden">
 
+    <!-- Sidebar -->
+    <aside class="w-64 bg-dark text-slate-300 flex flex-col transition-all duration-300 z-20 hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-slate-700">
+            <i class="fas fa-money-check-alt text-primary text-2xl mr-3"></i>
+            <span class="text-white font-bold text-xl tracking-tight">AutoPay</span>
+        </div>
+        <nav class="flex-1 py-6 px-4 space-y-2">
+            <a href="#" class="flex items-center px-4 py-3 bg-primary text-white rounded-lg transition-colors">
+                <i class="fas fa-chart-line w-6"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#" onclick="showView('employees')" class="flex items-center px-4 py-3 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                <i class="fas fa-users w-6"></i>
+                <span class="font-medium">Employees</span>
+            </a>
+            <a href="#" onclick="showView('claims')" class="flex items-center px-4 py-3 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                <i class="fas fa-file-signature w-6"></i>
+                <span class="font-medium">Claims & Apps</span>
+            </a>
+            <a href="#" onclick="showView('payroll')" class="flex items-center px-4 py-3 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                <i class="fas fa-file-invoice-dollar w-6"></i>
+                <span class="font-medium">Salary Bills</span>
+            </a>
+            <a href="#" onclick="showView('statements')" class="flex items-center px-4 py-3 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                <i class="fas fa-file-archive w-6"></i>
+                <span class="font-medium">Yearly Statements</span>
+            </a>
+            <a href="#" class="flex items-center px-4 py-3 hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                <i class="fas fa-cog w-6"></i>
+                <span class="font-medium">Settings</span>
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-700">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold">
+                    A
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-white">Admin User</p>
+                    <p class="text-xs text-slate-400">HR Manager</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm">
+            <div class="flex items-center md:hidden">
+                <button class="text-slate-500 hover:text-slate-700 focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <span class="ml-4 font-bold text-xl text-dark">AutoPay</span>
+            </div>
+            <div class="hidden md:block">
+                <h1 class="text-xl font-semibold text-slate-800" id="current-month-header">Payroll Dashboard</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="text-slate-400 hover:text-slate-600 relative">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-6 scroll-smooth">
+            <div class="max-w-6xl mx-auto space-y-6">
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Active Employees</p>
+                            <h3 class="text-3xl font-bold text-slate-800" id="stat-employees">0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Estimated Monthly Payroll</p>
+                            <h3 class="text-3xl font-bold text-slate-800" id="stat-total-payroll">$0</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 text-xl">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 mb-1">Next Run Date</p>
+                            <h3 class="text-xl font-bold text-slate-800" id="stat-next-run">--</h3>
+                        </div>
+                        <div class="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 text-xl">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payroll Trend Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4">6-Month Payroll Trend</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="payrollChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Automation Action Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-2">Generate Salary Bills</h2>
+                            <p class="text-blue-100 max-w-xl text-sm">Review approved claims and the employee roster, then generate this month's official Salary Bills with a single click.</p>
+                        </div>
+                        <button id="run-payroll-btn" onclick="runMonthlyPayroll()" class="whitespace-nowrap bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg font-bold shadow-md transition-all transform hover:scale-105 flex items-center gap-2">
+                            <i class="fas fa-play"></i> Generate Bills Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table Area -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <div class="flex items-center gap-4">
+                            <h3 class="text-lg font-semibold text-slate-800" id="table-title">Employee Roster</h3>
+                            <select id="emp-type-filter" onchange="renderEmployees()" class="text-sm border border-slate-300 rounded-md text-slate-600 px-2 py-1 shadow-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                                <option value="All">All Types</option>
+                                <option value="Permanent">Permanent</option>
+                                <option value="Temporary">Temporary</option>
+                            </select>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="showView('employees')" id="tab-employees" class="px-4 py-2 text-sm font-medium rounded-md bg-white border border-slate-300 shadow-sm text-slate-700 hover:bg-slate-50 transition-colors">Employees</button>
+                            <button onclick="showView('claims')" id="tab-claims" class="px-4 py-2 text-sm font-medium rounded-md bg-transparent text-slate-500 hover:text-slate-700 transition-colors">Claims & Apps</button>
+                            <button onclick="showView('payroll')" id="tab-payroll" class="px-4 py-2 text-sm font-medium rounded-md bg-transparent text-slate-500 hover:text-slate-700 transition-colors">Salary Bills</button>
+                            <button onclick="showView('statements')" id="tab-statements" class="px-4 py-2 text-sm font-medium rounded-md bg-transparent text-slate-500 hover:text-slate-700 transition-colors">Yearly Statements</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <!-- Employee View -->
+                        <table id="employee-table" class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Base Salary</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Adjustments</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Remarks</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Bank Details</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-list" class="bg-white divide-y divide-slate-200">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Claims & Applications View (Hidden by default) -->
+                        <table id="claims-table" class="min-w-full divide-y divide-slate-200 hidden">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Application Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Claim Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="claims-list" class="bg-white divide-y divide-slate-200">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+
+                        <!-- Payroll Run View (Hidden by default) -->
+                        <table id="payroll-table" class="min-w-full divide-y divide-slate-200 hidden">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Bill Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Total Bill Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payroll-list" class="bg-white divide-y divide-slate-200">
+                                <!-- Populated by JS -->
+                                <tr id="empty-payroll-state">
+                                    <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                                        <i class="fas fa-file-invoice-dollar text-4xl mb-3 text-slate-300"></i>
+                                        <p>No salary bills generated yet. Click "Generate Bills Now".</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Yearly Statements View (Hidden by default) -->
+                        <table id="statements-table" class="min-w-full divide-y divide-slate-200 hidden">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tax Year</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Base Pay (YTD)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Adjustments (YTD)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Net Paid</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statements-list" class="bg-white divide-y divide-slate-200">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Toast Notification Container -->
+        <div id="toast-container" class="absolute bottom-6 right-6 flex flex-col gap-3 z-50"></div>
+    </main>
+
+    <script>
+        // --- Mock Data ---
+        const employees = [
+            { id: 1, name: "Sarah Jenkins", role: "Frontend Developer", type: "Permanent", salary: 5500, bank: "**** 4521", adjustments: 200, remarks: "Performance bonus" },
+            { id: 2, name: "Marcus Thorne", role: "Backend Engineer", type: "Permanent", salary: 6200, bank: "**** 8892", adjustments: 0, remarks: "-" },
+            { id: 3, name: "Elena Rodriguez", role: "Product Manager", type: "Permanent", salary: 7100, bank: "**** 1123", adjustments: -150, remarks: "Unpaid leave (1 day)" },
+            { id: 4, name: "David Kim", role: "UI/UX Designer", type: "Temporary", salary: 4800, bank: "**** 9945", adjustments: 500, remarks: "Referral Bonus" },
+            { id: 5, name: "Lisa Wong", role: "QA Specialist", type: "Temporary", salary: 4200, bank: "**** 3321", adjustments: 0, remarks: "-" }
+        ];
+
+        let claimsData = [
+            { id: 'c1', empId: 2, name: "Marcus Thorne", type: "Overtime Application", amount: 350, date: "May 02, 2026", status: "Pending", remarks: "Weekend server migration" },
+            { id: 'c2', empId: 5, name: "Lisa Wong", type: "Expense Claim", amount: 120, date: "May 04, 2026", status: "Pending", remarks: "Software license reimbursement" },
+            { id: 'c3', empId: 1, name: "Sarah Jenkins", type: "Travel Allowance", amount: 200, date: "Apr 28, 2026", status: "Approved", remarks: "Client visit to HQ" }
+        ];
+
+        let payrollHistory = [];
+        let payChartInstance = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboardStats();
+            renderEmployees();
+            renderClaims();
+            renderStatements();
+            initChart();
+            
+            // Set headers based on current date
+            const date = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('current-month-header').innerText = `Payroll Dashboard - ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            
+            // Set next run date (last day of current month)
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+            document.getElementById('stat-next-run').innerText = `${monthNames[date.getMonth()]} ${lastDay.getDate()}`;
+        });
+
+        // --- Logic Functions ---
+
+        function updateDashboardStats() {
+            document.getElementById('stat-employees').innerText = employees.length;
+            const totalSalary = employees.reduce((sum, emp) => sum + emp.salary + (emp.adjustments || 0), 0);
+            document.getElementById('stat-total-payroll').innerText = `$${totalSalary.toLocaleString()}`;
+            
+            if (payChartInstance) {
+                // Update the current month estimate dynamically in the chart
+                const dataArray = payChartInstance.data.datasets[0].data;
+                dataArray[dataArray.length - 1] = totalSalary;
+                payChartInstance.update();
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('payrollChart').getContext('2d');
+            
+            // Mock data for previous 5 months + current month estimate
+            const labels = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May (Est.)'];
+            const initialTotal = employees.reduce((sum, emp) => sum + emp.salary + (emp.adjustments || 0), 0);
+            const data = [27500, 28000, 27800, 29000, 28500, initialTotal];
+
+            payChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Payroll ($)',
+                        data: data,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4,
+                        barThickness: 32
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9', borderDash: [5, 5] },
+                            ticks: { callback: value => '$' + value / 1000 + 'k' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderEmployees() {
+            const list = document.getElementById('employee-list');
+            const filterValue = document.getElementById('emp-type-filter').value;
+            list.innerHTML = '';
+            
+            const filteredEmployees = employees.filter(emp => filterValue === 'All' || emp.type === filterValue);
+            
+            filteredEmployees.forEach(emp => {
+                const adjustmentClass = emp.adjustments > 0 ? 'text-green-600' : (emp.adjustments < 0 ? 'text-red-600' : 'text-slate-400');
+                const adjustmentText = emp.adjustments > 0 ? `+$${emp.adjustments}` : (emp.adjustments < 0 ? `-$${Math.abs(emp.adjustments)}` : `$0`);
+                
+                const typeBadgeClass = emp.type === 'Permanent' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+                                ${emp.name.charAt(0)}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-slate-900">${emp.name}</div>
+                                <div class="text-sm text-slate-500">ID: EMP-${emp.id.toString().padStart(3, '0')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-slate-900">${emp.role}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeBadgeClass}">
+                            ${emp.type}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-slate-900">$${emp.salary.toLocaleString()}</div>
+                        <div class="text-xs text-slate-500">/ month</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium ${adjustmentClass}">${adjustmentText}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-slate-500 truncate max-w-[150px]" title="${emp.remarks}">${emp.remarks}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        <i class="fas fa-university mr-1"></i> ${emp.bank}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900"><i class="fas fa-edit"></i></button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        function renderClaims() {
+            const list = document.getElementById('claims-list');
+            list.innerHTML = '';
+            
+            claimsData.forEach(claim => {
+                const statusClass = claim.status === 'Approved' ? 'bg-green-100 text-green-800' : (claim.status === 'Rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800');
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${claim.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-900 text-sm">${claim.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-slate-900">${claim.type}</div>
+                        <div class="text-xs text-slate-500">${claim.remarks}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">$${claim.amount.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${claim.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        ${claim.status === 'Pending' ? `
+                            <button onclick="processClaim('${claim.id}', 'Approved')" class="text-green-600 hover:text-green-900 mr-3" title="Approve"><i class="fas fa-check-circle text-lg"></i></button>
+                            <button onclick="processClaim('${claim.id}', 'Rejected')" class="text-red-600 hover:text-red-900" title="Reject"><i class="fas fa-times-circle text-lg"></i></button>
+                        ` : `<span class="text-slate-400 text-xs">Processed</span>`}
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        function processClaim(claimId, newStatus) {
+            const claim = claimsData.find(c => c.id === claimId);
+            if (claim && claim.status === 'Pending') {
+                claim.status = newStatus;
+                
+                if (newStatus === 'Approved') {
+                    // Update employee adjustments based on approved claim
+                    const emp = employees.find(e => e.id === claim.empId);
+                    if (emp) {
+                        emp.adjustments = (emp.adjustments || 0) + claim.amount;
+                        emp.remarks = (emp.remarks === "-" || !emp.remarks) ? claim.type : emp.remarks + ", " + claim.type;
+                    }
+                    showToast(`Approved ${claim.type} for ${claim.name}. Added to Salary Bill.`, 'success');
+                } else {
+                    showToast(`Rejected ${claim.type} for ${claim.name}.`);
+                }
+                
+                renderClaims();
+                renderEmployees();
+                updateDashboardStats();
+            }
+        }
+
+        function runMonthlyPayroll() {
+            const btn = document.getElementById('run-payroll-btn');
+            
+            // Visual feedback
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            setTimeout(() => {
+                const date = new Date();
+                const dateString = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                
+                // Generate records for each employee incorporating adjustments
+                employees.forEach(emp => {
+                    const totalPay = emp.salary + (emp.adjustments || 0);
+                    payrollHistory.unshift({
+                        id: Math.random().toString(36).substr(2, 9),
+                        employeeName: emp.name,
+                        amount: totalPay,
+                        date: dateString,
+                        status: 'Pending Transfer'
+                    });
+                });
+
+                // Reset button
+                btn.innerHTML = '<i class="fas fa-check"></i> Run Complete';
+                btn.classList.remove('bg-white', 'text-blue-600');
+                btn.classList.add('bg-green-400', 'text-white');
+                
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-play"></i> Generate Bills Now';
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed', 'bg-green-400', 'text-white');
+                    btn.classList.add('bg-white', 'text-blue-600');
+                }, 3000);
+
+                showToast(`Successfully generated Salary Bills for ${employees.length} employees.`);
+                renderPayrollHistory();
+                showView('payroll'); // Switch to payroll view
+            }, 1500);
+        }
+
+        function renderPayrollHistory() {
+            const list = document.getElementById('payroll-list');
+            const emptyState = document.getElementById('empty-payroll-state');
+            
+            if (payrollHistory.length > 0) {
+                if (emptyState) emptyState.remove();
+                list.innerHTML = '';
+                
+                payrollHistory.forEach(record => {
+                    const statusClass = record.status === 'Paid' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800';
+                        
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${record.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${record.employeeName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">$${record.amount.toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                ${record.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            ${record.status !== 'Paid' ? 
+                                `<button onclick="markAsPaid('${record.id}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded">Mark Paid</button>` : 
+                                `<button class="text-slate-400 cursor-not-allowed"><i class="fas fa-check-circle"></i> Completed</button>`
+                            }
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            }
+        }
+
+        function markAsPaid(recordId) {
+            const record = payrollHistory.find(r => r.id === recordId);
+            if (record) {
+                record.status = 'Paid';
+                renderPayrollHistory();
+                showToast(`Payment confirmed for ${record.employeeName}.`, 'success');
+            }
+        }
+
+        function renderStatements() {
+            const list = document.getElementById('statements-list');
+            list.innerHTML = '';
+            const previousYear = new Date().getFullYear() - 1;
+
+            employees.forEach(emp => {
+                // Mock calculation for full previous year
+                const yearlyBase = emp.salary * 12;
+                // Add some realistic variance to adjustments for the year based on current adjustments
+                const yearlyAdjustments = (emp.adjustments || 0) * 3 + Math.floor(Math.random() * 1000); 
+                const totalPaid = yearlyBase + yearlyAdjustments;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${previousYear}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-slate-900 text-sm">${emp.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">$${yearlyBase.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${yearlyAdjustments >= 0 ? 'text-green-600' : 'text-red-600'}">${yearlyAdjustments >= 0 ? '+' : ''}$${yearlyAdjustments.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">$${totalPaid.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="downloadStatement('${emp.name}', ${previousYear})" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded flex items-center justify-center gap-2 ml-auto transition-colors">
+                            <i class="fas fa-file-pdf"></i> Statement PDF
+                        </button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        function downloadStatement(name, year) {
+            showToast(`Generating ${year} Tax Statement PDF for ${name}...`, 'success');
+        }
+
+        function showView(view) {
+            const empTable = document.getElementById('employee-table');
+            const claimsTable = document.getElementById('claims-table');
+            const payTable = document.getElementById('payroll-table');
+            const statementsTable = document.getElementById('statements-table');
+            
+            const tabEmp = document.getElementById('tab-employees');
+            const tabClaims = document.getElementById('tab-claims');
+            const tabPay = document.getElementById('tab-payroll');
+            const tabStatements = document.getElementById('tab-statements');
+            
+            const title = document.getElementById('table-title');
+            const empTypeFilter = document.getElementById('emp-type-filter');
+
+            // Reset all tabs
+            [tabEmp, tabClaims, tabPay, tabStatements].forEach(tab => {
+                tab.classList.replace('bg-white', 'bg-transparent');
+                tab.classList.replace('text-slate-700', 'text-slate-500');
+                tab.classList.remove('border', 'border-slate-300', 'shadow-sm');
+            });
+
+            // Hide all tables and filter
+            empTable.classList.add('hidden');
+            claimsTable.classList.add('hidden');
+            payTable.classList.add('hidden');
+            statementsTable.classList.add('hidden');
+            empTypeFilter.classList.add('hidden');
+
+            if (view === 'employees') {
+                empTable.classList.remove('hidden');
+                empTypeFilter.classList.remove('hidden');
+                tabEmp.classList.replace('bg-transparent', 'bg-white');
+                tabEmp.classList.replace('text-slate-500', 'text-slate-700');
+                tabEmp.classList.add('border', 'border-slate-300', 'shadow-sm');
+                title.innerText = "Employee Roster";
+            } else if (view === 'claims') {
+                claimsTable.classList.remove('hidden');
+                tabClaims.classList.replace('bg-transparent', 'bg-white');
+                tabClaims.classList.replace('text-slate-500', 'text-slate-700');
+                tabClaims.classList.add('border', 'border-slate-300', 'shadow-sm');
+                title.innerText = "Pending Claims & Applications";
+            } else if (view === 'statements') {
+                statementsTable.classList.remove('hidden');
+                tabStatements.classList.replace('bg-transparent', 'bg-white');
+                tabStatements.classList.replace('text-slate-500', 'text-slate-700');
+                tabStatements.classList.add('border', 'border-slate-300', 'shadow-sm');
+                title.innerText = "Yearly Tax & Salary Statements";
+            } else {
+                payTable.classList.remove('hidden');
+                tabPay.classList.replace('bg-transparent', 'bg-white');
+                tabPay.classList.replace('text-slate-500', 'text-slate-700');
+                tabPay.classList.add('border', 'border-slate-300', 'shadow-sm');
+                title.innerText = "Recent Salary Bills";
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const icon = type === 'success' ? '<i class="fas fa-check-circle text-green-500"></i>' : '<i class="fas fa-info-circle text-blue-500"></i>';
+            const borderClass = type === 'success' ? 'border-green-500' : 'border-blue-500';
+
+            toast.className = `bg-white border-l-4 ${borderClass} shadow-lg rounded-r-lg p-4 flex items-center gap-3 toast-enter max-w-sm`;
+            toast.innerHTML = `
+                <div class="text-xl">${icon}</div>
+                <div class="text-sm font-medium text-slate-700">${message}</div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
